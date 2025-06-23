@@ -22,6 +22,7 @@ from moto.packages.boto.ec2.instance import Reservation
 
 from ..exceptions import (
     AvailabilityZoneNotFromRegionError,
+    EC2ClientError,
     InvalidInstanceIdError,
     InvalidInstanceTypeError,
     InvalidParameterCombination,
@@ -756,6 +757,16 @@ class InstanceBackend:
     # instances are never deleted (they are kept in "terminated" state)
     # so there is no clean-up to do
     def run_instances(self, *args, **kwargs):
+        # Because, it is not easy to reach an instance type failure/unavailability,
+        # we raise an error when a specific tags is passed on.
+        tags = kwargs.get("tags", {})
+        instance_tags = tags.get("instance", {})
+        if instance_tags.get("moto-error", None) == "unavailable_instance_type":
+            raise EC2ClientError(
+                "InstanceLimitExceeded",
+                "InstanceLimitExceeded: Your quota allows for 0 more running instance(s).",
+            )
+
         if not hasattr(self, 'id_to_instances'):
             self._build_instance_dict()
         result = self._original_run_instances(*args, **kwargs)
