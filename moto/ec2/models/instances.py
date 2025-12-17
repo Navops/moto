@@ -757,14 +757,15 @@ class InstanceBackend:
     # instances are never deleted (they are kept in "terminated" state)
     # so there is no clean-up to do
     def run_instances(self, *args, **kwargs):
-        # Because, it is not easy to reach an instance type failure/unavailability,
+        # Because it is not easy to reach an instance type failure/unavailability,
         # we raise an error when a specific tags is passed on.
         tags = kwargs.get("tags", {})
         instance_tags = tags.get("instance", {})
         if instance_tags.get("moto-error", None) == "unavailable_instance_type":
             raise EC2ClientError(
-                "InstanceLimitExceeded",
-                "InstanceLimitExceeded: Your quota allows for 0 more running instance(s).",
+                "InsufficientInstanceCapacity",
+                f"We currently do not have sufficient {kwargs['instance_type']} capacity "
+                f"in the Availability Zone you requested ({kwargs['placement']})",
             )
 
         if not hasattr(self, 'id_to_instances'):
